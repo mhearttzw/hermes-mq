@@ -1,0 +1,15 @@
+
+//rootProject.name = "hermes-mq"
+
+include(
+        "hermes-broker",
+        "hermes-client",
+        "hermes-store",
+        "hermes-remoting",
+        "hermes-common",
+        "distribution"
+)
+
+
+
+

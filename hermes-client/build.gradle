@@ -1,0 +1,12 @@
+// file: hermes-client/build.gradle
+
+dependencies {
+    // 客户端API会暴露网络层的类（如协议对象），所以使用 api 依赖 remoting 模块
+    api project(':hermes-remoting')
+
+    // 客户端API也可能暴露 common 模块中的类（如Topic配置），所以也使用 api
+    api project(':hermes-common')
+
+    // 客户端需要日志记录
+    implementation 'ch.qos.logback:logback-classic'
+}

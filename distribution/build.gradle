@@ -1,0 +1,17 @@
+plugins {
+    id 'application'
+}
+
+application {
+    mainClass = 'com.echelon.hermes.broker.BrokerController'
+}
+
+dependencies {
+    implementation project(':hermes-broker')
+}
+
+distributions {
+    main {
+        distributionBaseName = 'hermes-mq'
+    }
+}

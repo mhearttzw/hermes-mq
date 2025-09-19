@@ -1,0 +1,7 @@
+dependencies {
+    implementation project(':hermes-store')
+    implementation project(':hermes-remoting')
+    implementation project(':hermes-common')
+
+    implementation 'ch.qos.logback:logback-classic'
+}

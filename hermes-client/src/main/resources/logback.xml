@@ -1,0 +1,23 @@
+<!-- file: hermes-broker/src/main/resources/logback.xml -->
+<configuration>
+
+    <!-- 1. 定义Appender，这里我们定义一个控制台输出的Appender -->
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <!-- 2. 定义日志输出格式 -->
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 3. 设置我们自己项目代码的日志级别，设为DEBUG可以看到更多信息 -->
+    <logger name="com.yourcompany.hermes" level="DEBUG"/>
+
+    <!-- 4. 设置Netty的日志级别，避免启动时打印过多信息 -->
+    <logger name="io.netty" level="INFO"/>
+
+    <!-- 5. root logger是所有logger的根，设置默认的日志级别和Appender -->
+    <root level="INFO">
+        <appender-ref ref="STDOUT" />
+    </root>
+
+</configuration>

@@ -1,0 +1,9 @@
+// file: hermes-store/build.gradle
+
+dependencies {
+    // 依赖项目内的 common 模块，以使用配置类、常量和通用工具
+    implementation project(':hermes-common')
+
+    // 需要日志来记录关键的存储操作
+    implementation 'ch.qos.logback:logback-classic'
+}
