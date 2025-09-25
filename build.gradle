@@ -35,12 +35,13 @@ subprojects {
 
     // 3.3. 使用插件提供的 dependencyManagement 功能
     dependencyManagement {
+        imports {
+            mavenBom "io.netty:netty-bom:${rootProject.ext.nettyVersion}"
+        }
+
         dependencies {
             dependency "io.netty:netty-handler:${rootProject.ext.nettyVersion}"
             dependency "ch.qos.logback:logback-classic:${rootProject.ext.logbackVersion}"
-//            dependency 'com.google.code.gson:gson:2.10.1'
-            // fastjson2
-//            dependency "com.alibaba.fastjson2:fastjson2:${rootProject.ext.fastjsonVersion}"
             dependency "com.fasterxml.jackson.core:jackson-databind:${rootProject.ext.jacksonVersion}"
             dependency "com.fasterxml.jackson.core:jackson-annotations:${rootProject.ext.jacksonVersion}"
 
@@ -79,6 +80,7 @@ subprojects {
     tasks.withType(Test) {
         useJUnitPlatform()
     }
+
 }
 
 
