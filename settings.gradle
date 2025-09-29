@@ -1,4 +1,3 @@
-
 //rootProject.name = "hermes-mq"
 
 include(
@@ -7,9 +6,6 @@ include(
         "hermes-store",
         "hermes-remoting",
         "hermes-common",
+        "hermes-protocol",
         "distribution"
 )
-
-
-
-

@@ -1,4 +1,4 @@
-package com.echelon.hermes.common;
+package com.echelon.hermes.protocol;
 
 // in: hermes-common/src/main/java/.../common/RemotingCommandCode.java
 public class RemotingCommandCode {

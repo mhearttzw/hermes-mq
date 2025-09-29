@@ -1,11 +1,11 @@
-package com.echelon.hermes.remoting.protocol;
+package com.echelon.hermes.protocol;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 
 /**
- * 描述：TODO...
+ * 描述：RemotingCommand消息编码器
  *
  * @author jorelwang
  * @create 2025-09-18 09:48

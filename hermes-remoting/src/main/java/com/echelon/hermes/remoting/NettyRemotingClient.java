@@ -1,13 +1,12 @@
 package com.echelon.hermes.remoting;
 
-import com.echelon.hermes.remoting.protocol.CommandDecoder;
-import com.echelon.hermes.remoting.protocol.CommandEncoder;
-import com.echelon.hermes.remoting.protocol.RemotingCommand;
+import com.echelon.hermes.protocol.CommandDecoder;
+import com.echelon.hermes.protocol.CommandEncoder;
+import com.echelon.hermes.protocol.RemotingCommand;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -100,7 +99,7 @@ public class NettyRemotingClient {
         });
 
         // 阻塞等待数据返回
-        return future.get(timeoutMillis, TimeUnit.MILLISECONDS);
+        return future.get(timeoutMillis, TimeUnit.SECONDS);
     }
 
     public void shutdown() {

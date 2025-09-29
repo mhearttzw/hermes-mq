@@ -1,4 +1,4 @@
-package com.echelon.hermes.remoting.protocol;
+package com.echelon.hermes.protocol;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -7,7 +7,7 @@ import java.util.List;
 
 /**
  * 描述：rocketMq的decoder直接继承的LengthFieldBasedFrameDecoder
- *
+ * RemotingCommand消息解码器
  * @author jorelwang
  * @create 2025-09-18 20:22
  */

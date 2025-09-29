@@ -1,4 +1,4 @@
-package com.echelon.hermes.remoting.protocol;
+package com.echelon.hermes.protocol;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;

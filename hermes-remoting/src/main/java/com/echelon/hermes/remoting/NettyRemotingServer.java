@@ -1,14 +1,13 @@
 package com.echelon.hermes.remoting;
 
-import com.echelon.hermes.common.RemotingCommandCode;
-import com.echelon.hermes.remoting.protocol.CommandDecoder;
-import com.echelon.hermes.remoting.protocol.CommandEncoder;
-import com.echelon.hermes.remoting.protocol.RemotingCommand;
+import com.echelon.hermes.protocol.RemotingCommandCode;
+import com.echelon.hermes.protocol.CommandDecoder;
+import com.echelon.hermes.protocol.CommandEncoder;
+import com.echelon.hermes.protocol.RemotingCommand;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -20,6 +19,7 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import java.net.InetSocketAddress;
+import java.util.HashMap;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,6 +43,9 @@ public class NettyRemotingServer {
     private final EventLoopGroup workerGroup;
     // 服务器绑定的端口，启动之后会改为config设置的端口
     private int port = 0;
+
+    // 用于存储【请求码】和【对应处理器】的映射表
+    private final HashMap<Short, RequestProcessor> processorTable = new HashMap<>();
 
     public NettyRemotingServer(int port) {
         this.port = port;
@@ -73,7 +76,7 @@ public class NettyRemotingServer {
                                 ))
                                 .addLast(new CommandEncoder())
                                 .addLast(new CommandDecoder())
-                                .addLast(new ServerHandler()); // 自己的业务处理器
+                                .addLast(new ServerHandler(processorTable)); // 自己的业务处理器
                     }
                 });
 
@@ -90,8 +93,27 @@ public class NettyRemotingServer {
         workerGroup.shutdownGracefully();
     }
 
+    /**
+     * 注册一个请求处理器
+     * broker模块将通过此方法，将自己的业务处理器注入到网络层
+     * @param requestCode       请求码
+     * @param requestProcessor  处理器实例
+     */
+    public void registerProcessor(short requestCode, RequestProcessor requestProcessor) {
+        this.processorTable.put(requestCode, requestProcessor);
+        log.info("Registered request processor for request code {}", requestCode);
+    }
+
+
     @Sharable
     class ServerHandler extends SimpleChannelInboundHandler<RemotingCommand> {
+
+        private final Logger logger = LoggerFactory.getLogger(ServerHandler.class);
+        private final HashMap<Short, RequestProcessor> processorTable;
+
+        public ServerHandler(HashMap<Short, RequestProcessor> processorTable) {
+            this.processorTable = processorTable;
+        }
 
         /**
          * Is called for each message of type {@link I}.
@@ -104,12 +126,17 @@ public class NettyRemotingServer {
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, RemotingCommand request) throws Exception {
             log.info("Server received command: {}", request);
-            if (Objects.equals(request.getCode(), RemotingCommandCode.PING)) {
-                // 如果是PING请求，回复一个PONG响应
-                RemotingCommand response = RemotingCommand.createPongResponse(request.getRequestId());
-                ctx.writeAndFlush(response);
-            } else {
-                log.info("Server received unknown command: {}", request);
+
+            final RequestProcessor requestProcessor = processorTable.get(request.getCode());
+            if (requestProcessor != null) {
+                final RemotingChannel channel = new NettyChannelImp(ctx.channel());
+                final RemotingCommand response = requestProcessor.processRequest(channel, request);
+                if (response != null) {
+                    // 在发送响应之前，统一编码customHeader
+                    response.encodeCustomHeader();
+                    log.info("Server sending response for request code:{}, response:{}", request.getCode(), response);
+                    channel.writeAndFlush(response);
+                }
             }
         }
 

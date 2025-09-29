@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package com.echelon.hermes.remoting.protocol;
+package com.echelon.hermes.protocol;
 
 public enum LanguageCode {
     JAVA((byte) 0),

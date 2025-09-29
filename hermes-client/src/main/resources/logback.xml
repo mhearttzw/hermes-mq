@@ -10,7 +10,7 @@
     </appender>
 
     <!-- 3. 设置我们自己项目代码的日志级别，设为DEBUG可以看到更多信息 -->
-    <logger name="com.yourcompany.hermes" level="DEBUG"/>
+    <logger name="com.echelon.hermes" level="DEBUG"/>
 
     <!-- 4. 设置Netty的日志级别，避免启动时打印过多信息 -->
     <logger name="io.netty" level="INFO"/>

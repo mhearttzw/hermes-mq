@@ -98,6 +98,7 @@ public class MappedFileQueue {
         // 如果没有文件，或者最后一个文件剩余空间不足
         if (lastMappedFile == null ||
                 lastMappedFile.getFileSize() - lastMappedFile.getWrotePosition() < needSize) {
+            // todo 增加对最后一个文件的精确恢复逻辑，而不是直接创建新文件
             return createNewMappedFile(lastMappedFile);
         }
 

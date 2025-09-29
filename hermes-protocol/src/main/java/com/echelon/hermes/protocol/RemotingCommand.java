@@ -1,9 +1,7 @@
-package com.echelon.hermes.remoting.protocol;
+package com.echelon.hermes.protocol;
 
-import com.echelon.hermes.common.RemotingCommandCode;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.Data;
 
@@ -29,6 +27,33 @@ public class RemotingCommand {
     // -- body --
     private transient byte[] body;
 
+    // 元数据与数据分离
+    // 存储业务层的自定义Header
+    @JsonIgnore
+    private transient CommandCustomHeader customHeader;
+
+    /**
+     * 存储customHeader序列化后的JSON字符串
+     */
+    private String extFields;
+
+    /**
+     * 在发送命令前，调用此方法，将customHeader对象编码成JSON字符串
+     */
+    public void encodeCustomHeader() throws JsonProcessingException {
+        if (this.customHeader != null) {
+            this.extFields = JsonUtils.toJson(this.customHeader);
+        }
+    }
+
+    public <T extends CommandCustomHeader> T decodeCustomHeader(Class<T> headerClass) throws JsonProcessingException {
+        if (this.extFields != null) {
+            this.customHeader = JsonUtils.fromJson(this.extFields, headerClass);
+            return (T) this.customHeader;
+        }
+        return null;
+    }
+
 
     /**
      * 将header部分编码为JSON字符串，然后转化为byte[]
@@ -41,7 +66,7 @@ public class RemotingCommand {
      * 将header部分的byte[]解码为RemotingCommand对象
      */
     public static RemotingCommand decodeHeader(byte[] headerData) {
-        return RemotingSerializable.decode(headerData,  RemotingCommand.class);
+        return RemotingSerializable.decode(headerData, RemotingCommand.class);
     }
 
     public static RemotingCommand createRequestCommand(short code) {
@@ -73,6 +98,31 @@ public class RemotingCommand {
         return createResponseCommand(RemotingCommandCode.SUCCESS, "PONG", requestId);
     }
 
+    // Getters and Setters
+    public CommandCustomHeader getCustomHeader() {
+        return customHeader;
+    }
+
+    public void setCustomHeader(CommandCustomHeader customHeader) {
+        this.customHeader = customHeader;
+    }
+
+    public byte[] getBody() {
+        return body;
+    }
+
+    public void setBody(byte[] body) {
+        this.body = body;
+    }
+
+    public String getExtFields() {
+        return extFields;
+    }
+
+    public void setExtFields(String extFields) {
+        this.extFields = extFields;
+    }
+
     @Override
     public String toString() {
         return "RemotingCommand [code=" + code +
@@ -81,7 +131,6 @@ public class RemotingCommand {
                 ", version=" + version
                 + ", remark=" + remark + "]";
     }
-
 
 
 }
