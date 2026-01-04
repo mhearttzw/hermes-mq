@@ -35,6 +35,39 @@ public class MessageExt implements Serializable {
     // 消息在commitLog中的物理偏移量
     private long commitLogOffset;
 
+    // 消息大小
+    private int storeSize;
+
+    // 队列ID
+    private int queueId;
+
+    // Tags的哈希码
+    private long tagsCode;
+
+    public int getStoreSize() {
+        return storeSize;
+    }
+
+    public void setStoreSize(int storeSize) {
+        this.storeSize = storeSize;
+    }
+
+    public int getQueueId() {
+        return queueId;
+    }
+
+    public void setQueueId(int queueId) {
+        this.queueId = queueId;
+    }
+
+    public long getTagsCode() {
+        return tagsCode;
+    }
+
+    public void setTagsCode(long tagsCode) {
+        this.tagsCode = tagsCode;
+    }
+
     public MessageExt() {
         this.properties = new HashMap<>();
     }

@@ -137,6 +137,30 @@ public class MappedFile {
         }
     }
 
+    /**
+     * 预热文件 (Warm Up)
+     * 通过每隔4KB读取一次，触发操作系统的缺页中断，将文件加载到物理内存
+     */
+    public void warmUp() {
+        long beginTime = System.currentTimeMillis();
+        ByteBuffer byteBuffer = this.mappedByteBuffer.slice();
+        int flush = 0;
+        
+        // 按页（4KB）遍历整个映射区域
+        // 4KB是大多数操作系统的默认页大小
+        int pageSize = 4096;
+        for (int i = 0; i < this.fileSize; i += pageSize) {
+            byteBuffer.get(i);  // 读一下，触发Page Fault
+            flush++;
+        }
+        
+        long endTime = System.currentTimeMillis();
+        log.info("MappedFile warmUp done, size: {}, cost time: {}ms, pages: {}", 
+            this.fileSize, endTime - beginTime, flush);
+            
+        // 注意：严格来说还需要调用 mlock 系统调用锁定内存，防止被 swap 出去
+        // 但这需要 JNA/JNI 支持，这里为了简化省略
+    }
 
     /**
      * 追加消息
@@ -185,13 +209,41 @@ public class MappedFile {
     }
 
     /**
+     * 获取指定位置的ByteBuffer
+     * @param pos   读取的起始位置
+     * @return      从pos开始，直到当前已写入位置结束的ByteBuffer视图，如果pos无效，返回null
+     */
+    public ByteBuffer selectMappedBuffer(int pos) {
+        // 1、获取当前已写入的位置
+        int wrotePosition = this.getWrotePosition();
+
+        // 2、请求的位置必须小于等于当前写入的位置
+        if (pos >0 && pos < wrotePosition) {
+            try {
+                ByteBuffer byteBuffer = this.mappedByteBuffer.slice();
+                byteBuffer.position(pos);
+                // 计算从pos开始，到当前写入位置的剩余数据大小
+                int size = wrotePosition - pos;
+                ByteBuffer byteBufferNew = byteBuffer.slice();
+                byteBufferNew.limit(size);
+                return byteBufferNew;
+            } catch (Exception e) {
+                log.error("selectMappedBuffer Exception", e);
+            }
+        }
+
+        // 3、如果请求的位置无效，返回null
+        return null;
+    }
+
+    /**
      * 从文件的指定位置读取指定大小的数据。
      * @param pos  读取的起始位置 (文件内的相对位置)
      * @param size 读取的大小
-     * @return 一个包含所读取数据的ByteBuffer
+     * @return 一个包含所读取数据的ByteBuffer，如果请求范围无效，返回null
      */
     public ByteBuffer selectMappedBuffer(int pos, int size) {
-        if (pos < this.fileSize && pos + size <= this.fileSize) {
+        if (pos >=0 && pos + size <= this.getWrotePosition()) {
             ByteBuffer byteBuffer = this.mappedByteBuffer.slice();
             byteBuffer.position(pos);
             ByteBuffer byteBufferNew = byteBuffer.slice();
@@ -273,7 +325,7 @@ public class MappedFile {
      * 支持java9+版本
      */
     public static void unmap(final ByteBuffer byteBuffer) {
-        if (byteBuffer != null) {
+        if (byteBuffer == null) {
             return;
         }
 

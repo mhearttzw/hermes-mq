@@ -22,7 +22,7 @@ public class CommitLogTest {
     private static final Logger log = LoggerFactory.getLogger(CommitLogTest.class);
 
     private CommitLog commitLog;
-    private final String storePath = "./unittteststore/commitlog";
+    private final String storePath = "./store/commitlog";
 
     @BeforeEach
     public void SetUp() {

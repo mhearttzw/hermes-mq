@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +34,12 @@ public class CommitLog {
     // 这对于保证消息的顺序性和内部数据结构（如MappedFileQueue）的一致性至关重要。
     protected final ReentrantLock putMessageLock = new ReentrantLock();
 
+    // 持有新消息监听器的引用
+    private volatile MessageArrivingListener messageArrivingListener;
+
+    public void setMessageArrivingListener(MessageArrivingListener messageArrivingListener) {
+        this.messageArrivingListener = messageArrivingListener;
+    }
 
     public  CommitLog(String storePath, int mappedFileSize) {
         this.storePath = storePath;
@@ -48,6 +56,10 @@ public class CommitLog {
 
     public void shutdown() {
         this.mappedFileQueue.destroy();
+    }
+
+    public String getStorePath() {
+        return storePath;
     }
 
     /**
@@ -81,6 +93,10 @@ public class CommitLog {
             boolean success = lastMappedFile.appendMessage(messageData);
 
             if (success) {
+                // 发送消息到达事件，出发监听器
+                if (this.messageArrivingListener != null) {
+                    this.messageArrivingListener.onMessageArrived();
+                }
                 return new PutMessageResult(PutMessageStatus.PUT_OK, startOffset);
             } else {
                 return new PutMessageResult(PutMessageStatus.MESSAGE_ILLEGAL, 0);
@@ -96,9 +112,84 @@ public class CommitLog {
         }
     }
 
+    public GetMessageResult getMessage(final long offset, final int maxMsgNums) {
+        GetMessageResult result = new GetMessageResult();
+        // 获取当前CommitLog的最大物理偏移量，即写入指针的位置
+        final long maxOffset = this.mappedFileQueue.getMaxOffset();
+
+        // 1、严格的参数和边界校验
+        if (offset < 0 || maxOffset <= 0) {
+           result.setStatus(GetMessageStatus.OFFSET_ILLEGAL);
+           result.setNextBeginOffset(offset);
+           return result;
+        }
+
+        if (offset >= maxOffset) {
+            result.setStatus(GetMessageStatus.NO_MESSAGE_IN_QUEUE);
+            result.setNextBeginOffset(maxOffset);
+            return result;
+        }
+
+        // 2、查找文件
+        MappedFile mappedFile = this.mappedFileQueue.findMappedFileByOffset(offset);
+        if (mappedFile == null) {
+            // 找不到对应的MappedFile，通常是offset对应的文件被删了
+            result.setStatus(GetMessageStatus.OFFSET_TOO_SMALL);
+            // 返回第一个文件的起始offset，建议消费者从头开始
+            result.setNextBeginOffset(this.mappedFileQueue.getFirstMappedFile().getFileFromOffset());
+            return result;
+        }
+
+        // 3、从文件中循环读取消息
+        int pos = (int) (offset% this.mappedFileSize);
+        // 获取从当前位置到最新写入位置的数据
+        ByteBuffer byteBufferView = mappedFile.selectMappedBuffer(pos);
+
+        if (byteBufferView != null) {
+            for (int i = 0; i < maxMsgNums && byteBufferView.hasRemaining(); i++) {
+                // a、读取消息总长度（4字节）
+                // 确保至少有4个字节可读，防止读取半条长度字段
+                if (byteBufferView.remaining() < 4) {
+                    break;
+                }
+                final int messageSize = byteBufferView.getInt();
+
+                // b、校验消息长度的合法性
+                if (messageSize <= 0 || messageSize > byteBufferView.remaining()) {
+                    // 读到了文件末尾的空白区域或损坏数据
+                    break;
+                }
+
+                // c、读取消息，并添加到结果列表中
+                ByteBuffer messageBuffer = byteBufferView.slice();
+                messageBuffer.limit(messageSize - 4); // limit是消息内容，不包含长度自身
+
+                result.addMessage(messageBuffer);
+
+                // d、更新byteBufferView的position，跳过这条消息的剩余部分
+                // (messageSize - 4) 是因为我们已经用getInt()消费了4个字节
+                byteBufferView.position(byteBufferView.position() + messageSize - 4);
+            }
+        }
+
+        // 4、设置最终状态和下一个偏移量
+        if (result.getMessageCount() == 0) {
+            result.setStatus(GetMessageStatus.NO_MESSAGE_IN_QUEUE);
+            // 如果没有任何消息，则返回当前offset
+            result.setNextBeginOffset(offset);
+        } else {
+            result.setStatus(GetMessageStatus.FOUND);
+            // 如果有消息，则返回下一条消息的起始offset
+            result.setNextBeginOffset(offset + result.getBufferTotalSize());
+        }
+
+        return result;
+
+    }
+
 
     /**
-     * 根据物理偏移量读取消息
+     * 根据物理偏移量读取消息，目前用于测试存储消息功能是否正确
      * @param offset    物理偏移量
      * @return          消息对象
      */
@@ -123,6 +214,7 @@ public class CommitLog {
         }
         return null;
     }
+
 
     /**
      * 简易的java原生序列化方案
